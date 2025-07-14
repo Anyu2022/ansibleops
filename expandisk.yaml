@@ -1,0 +1,117 @@
+---
+ansible_user: AVH_NT\svc_account
+ansible_connection: winrm
+ansible_port: 5985
+ansible_winrm_server_cert_validation: ignore
+ansible_winrm_transport: ntlm
+ansible_become_method: runas
+
+---
+---
+- name: vm disk expansion
+  hosts: localhost
+  become: false
+  gather_facts: false
+
+  tasks:
+  - name: Get all disks from existing VM
+    vmware_guest_disk_info:
+      validate_certs: False
+      datacenter: '{{ data_center }}'
+      name: '{{ vm_name  }}'
+    register: existing_disk
+
+  - name: Get Backing datastore for desired disk id
+    set_fact:
+      disk_zero_datastore: "{{ item.value.backing_datastore }}"
+    with_dict: "{{ existing_disk.guest_disk_info }}"
+    when: item.key == '0'
+  
+  - debug:
+      msg: "{{ disk_zero_datastore }}"
+    when: disk_zero_datastore is defined
+
+  - name: Get scsi controller type
+    set_fact:
+      scsi_type: "{{ item.value.controller_type }}"
+    with_dict: "{{ existing_disk.guest_disk_info }}"
+    when: item.key == '0'
+
+  - debug:
+      msg: '{{ scsi_type }}'
+    when: scsi_type is defined
+
+
+  - name: Get Unit Number
+    set_fact:
+      unit_number: "{{ item.value.unit_number }}"
+    with_dict: "{{ existing_disk.guest_disk_info }}"
+    when: item.key == '0'
+
+  - debug:
+      msg: '{{ unit_number }}'
+    when: unit_number is defined
+
+
+  - name: Get Disk + 30%
+    set_fact:
+      disc_size: "{{ item.value.capacity_in_kb|int *13/10| round(2, 'floor')|int }}"
+    with_dict: "{{ existing_disk.guest_disk_info }}"
+    when: item.key == '0'
+  
+  - debug:
+      msg: '{{ disc_size }}'
+    when: disc_size is defined
+
+  - name: Connect to VMWare and shutdown guest
+    community.vmware.vmware_guest:
+      validate_certs: no
+      datacenter: "{{ data_center }}"
+      name: "{{ vm_name }}"
+      state: shutdownguest
+    delegate_to: localhost
+    failed_when: vm_shutdown.instance.hw_power_status != 'poweredOff' and vm_shutdown.changed == false
+    register: vm_shutdown
+
+  - name: Wait 300 seconds, but only start checking after 15 seconds
+    wait_for_connection:
+      delay: 15
+      timeout: 300
+
+  - name: Connect to VMWare and resize disk on VM
+    community.vmware.vmware_guest_disk:
+      validate_certs: no
+      datacenter: "{{ data_center }}"
+      name: "{{ vm_name }}"
+      disk:
+        - size_kb: "{{ disc_size|int }}"
+          state: present
+          unit_number: "{{ unit_number }}"
+          scsi_controller: 0
+          scsi_type: "{{ scsi_type }}"
+    delegate_to: localhost
+    register: disk_facts
+
+  - name: Connect to VMWare and boot up guest
+    community.vmware.vmware_guest:
+      validate_certs: no
+      name: "{{ vm_name }}"
+      state: poweredon
+    delegate_to: localhost
+#    register: disk_facts
+  
+  - name: Wait 300 seconds, but only start checking after 30 seconds
+    wait_for_connection:
+      delay: 30
+      timeout: 300
+  
+  
+  - name: Connect to windows host and expand the drive
+    ansible.windows.win_powershell:
+      script: |
+        # Variable specifying the drive you want to extend
+        $drive_letter = "C"
+
+        # Script to get the partition sizes and then resize the volume
+        $size = (Get-PartitionSupportedSize -DriveLetter $drive_letter)
+        Resize-Partition -DriveLetter $drive_letter
