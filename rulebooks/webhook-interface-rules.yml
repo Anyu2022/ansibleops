@@ -17,11 +17,13 @@
         any:
           - event.payload.summary is defined
       action:
-        run_job_template:
-          name: "Solarwinds-Fix-Ports"
-          organization: "Default"
-          job_args:
-            extra_vars:
-              summary: "{{ event.payload.summary }}"
-              message: "{{ event.payload.message }}"
+        #run_job_template:
+        #  name: "Solarwinds-Fix-Ports"
+        #  organization: "Default"
+        #  job_args:
+        #    extra_vars:
+        #      summary: "{{ event.payload.summary }}"
+        #      message: "{{ event.payload.message }}"
+        run_playbook:
+         name: say-what.yml
 
