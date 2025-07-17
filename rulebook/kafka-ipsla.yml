@@ -1,0 +1,24 @@
+- name: Rules with kafka as source
+  hosts: localhost
+  sources:
+    - ansible.eda.kafka:
+        topic: telegraf
+        host: ip-172-16-213-105.us-east-2.compute.internal
+        port: 9092
+        group_id:
+  rules:
+    - name: Retrieve Data and Launch Job-template for Primary failure
+      condition: events.body.fields.latest_return_code == "ret-code-timeout" and events.body.fields.failure_count <= 4
+      action:
+        run_job_template:
+          name: "Network-EDA-Secondary"
+          organization: "Default"
+
+    - name: Retrieve Data and Launch Job-template for Primary Success
+      condition: events.body.fields.latest_return_code == "ret-code-ok" and events.body.fields.success_count <= 4
+      action:
+         run_job_template:
+          name: "Network-EDA-Primary"
+          organization: "Default"
+        
+    

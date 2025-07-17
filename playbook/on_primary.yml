@@ -1,0 +1,8 @@
+- name: Playbook to configure RHDP ansible controller for primary ISP
+  hosts: localhost
+  connection: local
+  
+  tasks:
+   - name: Launch a job-template - Network-EDA-Primary 
+     ansible.controller.job_launch:
+        job_template: "Network-EDA-Primary"
