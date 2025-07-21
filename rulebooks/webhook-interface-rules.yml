@@ -24,5 +24,6 @@
         #      summary: "{{ event.payload.summary }}"
         #      message: "{{ event.payload.message }}"
         run_playbook:
+          inventory: "inventory"
           name: say-what.yml
 
