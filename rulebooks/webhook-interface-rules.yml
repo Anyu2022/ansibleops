@@ -13,10 +13,9 @@
   ## Define the conditions we are looking for
 
   rules:
-    - name: Protect OSPF Neighbor port
-      condition: 
-        any:
-          - event.payload.summary is defined
+    - name: Say Hello
+       condition: event.payload.message == "Ansible is super cool!"
+     
       action:
         #run_job_template:
         #  name: "Solarwinds-Fix-Ports"
