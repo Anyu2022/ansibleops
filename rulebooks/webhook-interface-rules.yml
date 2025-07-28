@@ -26,5 +26,5 @@
         #debug:
         #  msg: "Hello Word!!"
         run_playbook:
-          name: say-waht.yml
+          name: say-what.yml
 
