@@ -23,6 +23,8 @@
         #    extra_vars:
         #      summary: "{{ event.payload.summary }}"
         #      message: "{{ event.payload.message }}"
-        debug:
-          msg: "Hello Word!!"
+        #debug:
+        #  msg: "Hello Word!!"
+        run_playbook:
+          name: say-waht.yml
 
